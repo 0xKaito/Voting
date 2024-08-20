@@ -25,11 +25,11 @@ describe("Voting", function () {
       expect(await voting.owner()).to.equal(owner.address);
       expect(await voting.candidatesCount()).to.equal(2);
 
-      expect((await voting.candidates(1))).to.equal("Alice");
-      expect((await voting.candidates(2))).to.equal("Bob");
+      expect((await voting.candidateNames(1))).to.equal("Alice");
+      expect((await voting.candidateNames(2))).to.equal("Bob");
 
-      expect(await voting.voteCount(currentSession, 1)).to.equal(0)
-      expect(await voting.voteCount(currentSession, 2)).to.equal(0)
+      expect(await voting.candidateVotes(currentSession, 1)).to.equal(0)
+      expect(await voting.candidateVotes(currentSession, 2)).to.equal(0)
 
       expect(await voting.currentSession()).to.equal(1)
     });
@@ -43,8 +43,8 @@ describe("Voting", function () {
         await voting.addCandidate("Calvin");
 
         const currentSession = await voting.currentSession();
-        expect(await voting.candidates(3)).to.equal("Calvin")
-        expect(await voting.voteCount(currentSession, 3)).to.equal(0)
+        expect(await voting.candidateNames(3)).to.equal("Calvin")
+        expect(await voting.candidateVotes(currentSession, 3)).to.equal(0)
       });
 
       it("Should emit an event on adding candidate", async function () {
@@ -63,20 +63,38 @@ describe("Voting", function () {
       });
     });
 
+    describe("Get candiate", function () {
+      it("Should get candidate details", async function () {
+        const { voting, otherAccount } = await loadFixture(deployOneYearLockFixture);
+        await voting.connect(otherAccount).vote(1);
+        await voting.connect(otherAccount).vote(2);
+        await voting.connect(otherAccount).vote(2);
+
+        const candidatesInfo = await voting.getCandidates();
+
+        expect(candidatesInfo[0].name).to.equal("Alice");
+        expect(candidatesInfo[1].name).to.equal("Bob");
+
+        expect(candidatesInfo[0].id).to.equal(1);
+        expect(candidatesInfo[1].id).to.equal(2);
+
+        expect(candidatesInfo[0].voteCount).to.equal(1);
+        expect(candidatesInfo[1].voteCount).to.equal(2);
+      });
+    });
+
     describe("Vote", function () {
       it("Should vote on candidate id", async function () {
         const { voting, otherAccount } = await loadFixture(deployOneYearLockFixture);
-        await voting.addCandidate("Alice");
         await voting.connect(otherAccount).vote(1);
 
         const currentSession = await voting.currentSession();
 
-        expect((await voting.voteCount(currentSession, 1))).to.equal(1);
+        expect((await voting.candidateVotes(currentSession, 1))).to.equal(1);
       });
 
       it("Should emit an event on vote", async function () {
         const { voting, otherAccount } = await loadFixture(deployOneYearLockFixture);
-        await voting.addCandidate("Alice");
         await expect(voting.connect(otherAccount).vote(1))
           .to.emit(voting, "VoteReceived")
           .withArgs(1, 1);
@@ -98,15 +116,15 @@ describe("Voting", function () {
         let currentSession = await voting.currentSession();
         expect(currentSession).to.equal(1);
 
-        expect((await voting.voteCount(currentSession, 1))).to.equal(1);
-        expect((await voting.voteCount(currentSession, 2))).to.equal(1);
+        expect((await voting.candidateVotes(currentSession, 1))).to.equal(1);
+        expect((await voting.candidateVotes(currentSession, 2))).to.equal(1);
 
         await voting.resetVotes();
         currentSession = await voting.currentSession();
         expect(currentSession).to.equal(2);
 
-        expect((await voting.voteCount(currentSession, 1))).to.equal(0);
-        expect((await voting.voteCount(currentSession, 2))).to.equal(0);
+        expect((await voting.candidateVotes(currentSession, 1))).to.equal(0);
+        expect((await voting.candidateVotes(currentSession, 2))).to.equal(0);
       });
 
       it("Should vote after reset", async function () {
@@ -117,22 +135,22 @@ describe("Voting", function () {
 
         let currentSession = await voting.currentSession();
 
-        expect((await voting.voteCount(currentSession, 1))).to.equal(1);
-        expect((await voting.voteCount(currentSession, 2))).to.equal(1);
+        expect((await voting.candidateVotes(currentSession, 1))).to.equal(1);
+        expect((await voting.candidateVotes(currentSession, 2))).to.equal(1);
 
         await voting.resetVotes();
         currentSession = await voting.currentSession();
 
-        expect((await voting.voteCount(currentSession, 1))).to.equal(0);
-        expect((await voting.voteCount(currentSession, 2))).to.equal(0);
+        expect((await voting.candidateVotes(currentSession, 1))).to.equal(0);
+        expect((await voting.candidateVotes(currentSession, 2))).to.equal(0);
 
         await voting.connect(otherAccount).vote(1);
         await voting.vote(2);
 
         currentSession = await voting.currentSession();
 
-        expect((await voting.voteCount(currentSession, 1))).to.equal(1);
-        expect((await voting.voteCount(currentSession, 2))).to.equal(1);
+        expect((await voting.candidateVotes(currentSession, 1))).to.equal(1);
+        expect((await voting.candidateVotes(currentSession, 2))).to.equal(1);
 
       });
 

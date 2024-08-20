@@ -6,6 +6,8 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 /// @title Voting Contract
 /// @notice This contract allows for adding candidates, voting, and resetting votes.
 contract Voting is Ownable {
+
+    /// @notice Candidates details, used in getCandidates function to return candidates details
     struct Candidate {
         string name;
         uint256 id;
@@ -20,10 +22,12 @@ contract Voting is Ownable {
     uint256 public currentSession = 1;
 
     /// @notice A mapping of candidate IDs to their names.
-    mapping (uint256 => string) public candidates;
+    /// @dev The first `uint256` key is the candidate ID, and the second `uint256` key is the candidate name.
+    mapping (uint256 => string) public candidateNames;
 
     /// @notice A mapping that tracks the vote count for each candidate in each session.
-    mapping (uint256 => mapping (uint256 => uint256)) public voteCount;
+    /// @dev The first `uint256` key is the session ID, and the second `uint256` key is the candidate ID.
+    mapping (uint256 => mapping (uint256 => uint256)) public candidateVotes;
 
     /// @notice Emitted when a new candidate is added to the current session.
     /// @param candidateId The ID of the candidate.
@@ -54,10 +58,8 @@ contract Voting is Ownable {
         _candidateInfo = new Candidate[](len);
 
         for (uint256 index = 1; index <= len; ++index ) {
-            _candidateInfo[index - 1] = Candidate(candidates[index], index, voteCount[currentSession][index]);
+            _candidateInfo[index - 1] = Candidate(candidateNames[index], index, candidateVotes[currentSession][index]);
         }
-
-        return _candidateInfo;
     }
 
     /// @notice Adds a new candidate to the voting system.
@@ -72,8 +74,8 @@ contract Voting is Ownable {
     /// @param _candidateId The ID of the candidate to vote for.
     function vote(uint _candidateId) external {
         require(_candidateId > 0 && _candidateId <= candidatesCount, "Voting: Invalid candidate ID");
-        voteCount[currentSession][_candidateId]++;
-        emit VoteReceived(_candidateId, voteCount[currentSession][_candidateId]);
+        candidateVotes[currentSession][_candidateId]++;
+        emit VoteReceived(_candidateId, candidateVotes[currentSession][_candidateId]);
     }
 
     /// @notice Resets the vote count for all candidates.
@@ -85,7 +87,7 @@ contract Voting is Ownable {
 
     function _addCandidate(string memory _name) internal {
         candidatesCount++;
-        candidates[candidatesCount] = _name;
+        candidateNames[candidatesCount] = _name;
         emit CandidateAdded(candidatesCount, _name);
     }
 }

@@ -3,8 +3,8 @@
   "scripts": {
     "test": "npx hardhat test",
     "compile": "npx hardhat compile",
-    "local:deploy": "npx hardhat node && npx hardhat --network localhost deploy",
-    "local:run": "npx hardhat node && npx hardhat --network localhost src/index.ts"
+    "local:deploy": "npx hardhat run --network localhost scripts/deploy.ts",
+    "local:run": "npx hardhat run --network localhost src/index.ts"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^3.0.0",

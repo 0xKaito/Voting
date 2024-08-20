@@ -22,7 +22,6 @@ async function main() {
     async function voteForCandidate(candidateId: number) {
         try {
             await (await votingContract.vote(candidateId)).wait();
-            console.log(await votingContract.getCandidateData(candidateId))
             console.log(`Votes successfully for candidate ${1}`)
         } catch (error) {
             console.error("Failed to vore", error);

@@ -2,7 +2,11 @@ import { ethers } from "hardhat";
 
 async function main() {
 
-  const admin = process.env.ADMIN ?? "";
+  const admin = process.env.ADMIN;
+  if (!admin) {
+    console.log("Provide admin address");
+    return;
+}
 
   const Voting = await ethers.getContractFactory("Voting");
   const voting = await Voting.deploy(admin);
