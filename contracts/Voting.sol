@@ -1,63 +1,70 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity =0.8.26;
+
+import "@openzeppelin/contracts/access/Ownable.sol";
 
 /// @title Voting Contract
 /// @notice This contract allows for adding candidates, voting, and resetting votes.
-contract Voting {
+contract Voting is Ownable {
     struct Candidate {
         string name;
-        uint id;
-        uint voteCount;
+        uint256 id;
+        uint256 voteCount;
     }
 
-    address public owner;
+    /// @notice The total number of candidates.
     uint256 public candidatesCount;
 
-    mapping (uint => Candidate) public candidates;
+    /// @notice The identifier for the current voting session.
+    /// @dev This can be incremented to start a new voting session
+    uint256 public currentSession = 1;
 
-    event CandidateAdded(uint indexed candidateId, string name);
-    event VoteReceived(uint indexed candidateId, uint voteCount);
-    event VoteReset(address indexed owner, uint totalCandidates);
+    /// @notice A mapping of candidate IDs to their names.
+    mapping (uint256 => string) public candidates;
+
+    /// @notice A mapping that tracks the vote count for each candidate in each session.
+    mapping (uint256 => mapping (uint256 => uint256)) public voteCount;
+
+    /// @notice Emitted when a new candidate is added to the current session.
+    /// @param candidateId The ID of the candidate.
+    /// @param name The name of the candidate.
+    event CandidateAdded(uint256 indexed candidateId, string name);
+
+    /// @notice Emitted when a vote is cast for a candidate.
+    /// @param candidateId The ID of the candidate that received the vote.
+    /// @param voteCount The new vote count for the candidate.
+    event VoteReceived(uint256 indexed candidateId, uint256 voteCount);
+
+    /// @notice Emitted when all votes are reset for the current session.
+    /// @param newSession New session id.
+    event VotesReset(uint256 indexed newSession);
 
     /// @notice Constructor to set the owner and initialize with two candidates.
     /// @param _owner The address of the contract owner.
-    constructor(address _owner) {
+    constructor(address _owner) Ownable(_owner) {
         // Initialize with two candidates
-        addCandidate("Alice");
-        addCandidate("Bob");
-
-        owner = _owner;
+        _addCandidate("Alice");
+        _addCandidate("Bob");
     }
 
     /// @notice Get list of all candidates.
-    /// @return An array of all candidates in the voting system.
-    function getCandidates() external view returns(Candidate[] memory) {
+    /// @return _candidateInfo An array of all candidates in the voting system.
+    function getCandidates() external view returns(Candidate[] memory _candidateInfo) {
         uint256 len = candidatesCount;
-        Candidate[] memory _candidateInfo = new Candidate[](len);
+        _candidateInfo = new Candidate[](len);
 
-        for (uint256 i = 1; i <= len; ++i ) {
-            _candidateInfo[i - 1] = candidates[i];
+        for (uint256 index = 1; index <= len; ++index ) {
+            _candidateInfo[index - 1] = Candidate(candidates[index], index, voteCount[currentSession][index]);
         }
 
         return _candidateInfo;
     }
 
-    /// @notice Get details of candidate.
-    /// @param _candidateId The ID of the candidate.
-    /// @return candidate id, name and voting count
-    function getCandidateData(uint256 _candidateId) external view returns(string memory, uint, uint) {
-        Candidate memory candidateInfo = candidates[_candidateId];
-        return (candidateInfo.name, candidateInfo.id, candidateInfo.voteCount);
-    }
-
     /// @notice Adds a new candidate to the voting system.
     /// @dev Only the contract owner can add a new candidate.
     /// @param _name The name of the candidate to be added.
-    function addCandidate(string memory _name) public {
-        require(msg.sender == owner || owner == address(0), "Voting: Invalid owner");
-        candidatesCount++;
-        candidates[candidatesCount] = Candidate(_name, candidatesCount, 0);
-        emit CandidateAdded(candidatesCount, _name);
+    function addCandidate(string memory _name) public onlyOwner {
+        _addCandidate(_name);
     }
 
     /// @notice Casts a vote for a candidate.
@@ -65,21 +72,20 @@ contract Voting {
     /// @param _candidateId The ID of the candidate to vote for.
     function vote(uint _candidateId) external {
         require(_candidateId > 0 && _candidateId <= candidatesCount, "Voting: Invalid candidate ID");
-        Candidate memory candidateInfo = candidates[_candidateId];
-        candidateInfo.voteCount++;
-        candidates[_candidateId] = candidateInfo;
-        emit VoteReceived(_candidateId, candidateInfo.voteCount);
+        voteCount[currentSession][_candidateId]++;
+        emit VoteReceived(_candidateId, voteCount[currentSession][_candidateId]);
     }
 
     /// @notice Resets the vote count for all candidates.
     /// @dev Only the contract owner can reset votes.
-    function resetVotes() external {
-        require(msg.sender == owner, "Voting: Invalid owner");
-        uint256 len = candidatesCount;
-        for (uint256 i = 1; i <= len; ++i ) {
-            candidates[i].voteCount = 0;
-        }
+    function resetVotes() external onlyOwner {
+        currentSession++;
+        emit VotesReset(currentSession);
+    }
 
-        emit VoteReset(msg.sender, len);
+    function _addCandidate(string memory _name) internal {
+        candidatesCount++;
+        candidates[candidatesCount] = _name;
+        emit CandidateAdded(candidatesCount, _name);
     }
 }

@@ -20,11 +20,18 @@ describe("Voting", function () {
     it("Should set the right admin", async function () {
       const { voting, owner } = await loadFixture(deployOneYearLockFixture);
 
+      const currentSession = await voting.currentSession();
+
       expect(await voting.owner()).to.equal(owner.address);
       expect(await voting.candidatesCount()).to.equal(2);
 
-      expect((await voting.candidates(1)).name).to.equal("Alice");
-      expect((await voting.candidates(2)).name).to.equal("Bob");
+      expect((await voting.candidates(1))).to.equal("Alice");
+      expect((await voting.candidates(2))).to.equal("Bob");
+
+      expect(await voting.voteCount(currentSession, 1)).to.equal(0)
+      expect(await voting.voteCount(currentSession, 2)).to.equal(0)
+
+      expect(await voting.currentSession()).to.equal(1)
     });
   });
 
@@ -33,12 +40,11 @@ describe("Voting", function () {
       it("Should add candidate", async function () {
         const { voting, otherAccount } = await loadFixture(deployOneYearLockFixture);
 
-        await voting.addCandidate("Alice");
-        const candidateInfo = await voting.candidates(1);
-    
-        expect(candidateInfo.name).to.equal("Alice")
-        expect(candidateInfo.voteCount).to.equal(0)
-        expect(candidateInfo.id).to.equal(1)
+        await voting.addCandidate("Calvin");
+
+        const currentSession = await voting.currentSession();
+        expect(await voting.candidates(3)).to.equal("Calvin")
+        expect(await voting.voteCount(currentSession, 3)).to.equal(0)
       });
 
       it("Should emit an event on adding candidate", async function () {
@@ -53,7 +59,7 @@ describe("Voting", function () {
 
       it("Should revert if caller is not owner", async function () {
         const { voting, otherAccount } = await loadFixture(deployOneYearLockFixture);
-        await expect(voting.connect(otherAccount).addCandidate("Alice")).to.be.revertedWith("Voting: Invalid owner");
+        await expect(voting.connect(otherAccount).addCandidate("Alice")).to.be.revertedWithCustomError(voting, "OwnableUnauthorizedAccount");
       });
     });
 
@@ -63,7 +69,9 @@ describe("Voting", function () {
         await voting.addCandidate("Alice");
         await voting.connect(otherAccount).vote(1);
 
-        expect((await voting.candidates(1)).voteCount).to.equal(1);
+        const currentSession = await voting.currentSession();
+
+        expect((await voting.voteCount(currentSession, 1))).to.equal(1);
       });
 
       it("Should emit an event on vote", async function () {
@@ -87,13 +95,45 @@ describe("Voting", function () {
         await voting.connect(otherAccount).vote(1);
         await voting.vote(2);
 
-        expect((await voting.candidates(1)).voteCount).to.equal(1);
-        expect((await voting.candidates(2)).voteCount).to.equal(1);
+        let currentSession = await voting.currentSession();
+        expect(currentSession).to.equal(1);
+
+        expect((await voting.voteCount(currentSession, 1))).to.equal(1);
+        expect((await voting.voteCount(currentSession, 2))).to.equal(1);
 
         await voting.resetVotes();
+        currentSession = await voting.currentSession();
+        expect(currentSession).to.equal(2);
 
-        expect((await voting.candidates(1)).voteCount).to.equal(0);
-        expect((await voting.candidates(2)).voteCount).to.equal(0);
+        expect((await voting.voteCount(currentSession, 1))).to.equal(0);
+        expect((await voting.voteCount(currentSession, 2))).to.equal(0);
+      });
+
+      it("Should vote after reset", async function () {
+        const { voting, otherAccount } = await loadFixture(deployOneYearLockFixture);
+
+        await voting.connect(otherAccount).vote(1);
+        await voting.vote(2);
+
+        let currentSession = await voting.currentSession();
+
+        expect((await voting.voteCount(currentSession, 1))).to.equal(1);
+        expect((await voting.voteCount(currentSession, 2))).to.equal(1);
+
+        await voting.resetVotes();
+        currentSession = await voting.currentSession();
+
+        expect((await voting.voteCount(currentSession, 1))).to.equal(0);
+        expect((await voting.voteCount(currentSession, 2))).to.equal(0);
+
+        await voting.connect(otherAccount).vote(1);
+        await voting.vote(2);
+
+        currentSession = await voting.currentSession();
+
+        expect((await voting.voteCount(currentSession, 1))).to.equal(1);
+        expect((await voting.voteCount(currentSession, 2))).to.equal(1);
+
       });
 
       it("Should emit an event on reset", async function () {
@@ -102,13 +142,13 @@ describe("Voting", function () {
         await voting.vote(1);
 
         await expect(voting.resetVotes())
-          .to.emit(voting, "VoteReset")
-          .withArgs(owner.address, 2);
+          .to.emit(voting, "VotesReset")
+          .withArgs(2);
       });
 
       it("Should revert if caller is not owner", async function () {
         const { voting, otherAccount } = await loadFixture(deployOneYearLockFixture);
-        await expect(voting.connect(otherAccount).resetVotes()).to.be.revertedWith("Voting: Invalid owner");
+        await expect(voting.connect(otherAccount).resetVotes()).to.be.revertedWithCustomError(voting, "OwnableUnauthorizedAccount");
       });
     });
   });

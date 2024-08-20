@@ -26,7 +26,7 @@ npx hardhat test
 
 ### Deploy
 ```shell
-npx hardhat run scripts/deploy.ts
+npx hardhat run --network localhost scripts/deploy.ts
 ```
 
 ### Start node

@@ -6,7 +6,12 @@ const provider = new ethers.JsonRpcProvider("http://127.0.0.1:8545");
 async function main() {
     const signer = await provider.getSigner();
 
-    const votingAddress = process.env.VOTING_ADDRESS ?? "";
+    const votingAddress = process.env.VOTING_ADDRESS;
+    if (!votingAddress) {
+        console.log("Provide voting contract address");
+        return;
+    }
+
     const votingContract = new ethers.Contract(votingAddress, VotingArtifacts.abi, signer)
 
     async function displayCandidates() {
@@ -16,8 +21,7 @@ async function main() {
 
     async function voteForCandidate(candidateId: number) {
         try {
-            const transactionResponses = await votingContract.vote(candidateId);
-            await transactionResponses.wait();
+            await (await votingContract.vote(candidateId)).wait();
             console.log(await votingContract.getCandidateData(candidateId))
             console.log(`Votes successfully for candidate ${1}`)
         } catch (error) {
@@ -27,11 +31,10 @@ async function main() {
 
     async function resetVote() {
         try {
-            const transactionResponses = await votingContract.resetVotes();
-            await transactionResponses.wait();
+            await (await votingContract.resetVotes()).wait();
             console.log("Votes reset successfully")
         } catch (error) {
-            console.error("Failed to vore", error);
+            console.error("Failed to vote", error);
         }
     }
 
