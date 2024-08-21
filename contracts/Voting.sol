@@ -54,10 +54,9 @@ contract Voting is Ownable {
     /// @notice Get list of all candidates.
     /// @return _candidateInfo An array of all candidates in the voting system.
     function getCandidates() external view returns(Candidate[] memory _candidateInfo) {
-        uint256 len = candidatesCount;
-        _candidateInfo = new Candidate[](len);
+        _candidateInfo = new Candidate[](candidatesCount);
 
-        for (uint256 index = 1; index <= len; ++index ) {
+        for (uint256 index = 1; index <= candidatesCount; ++index ) {
             _candidateInfo[index - 1] = Candidate(candidateNames[index], index, candidateVotes[currentSession][index]);
         }
     }
