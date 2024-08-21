@@ -13,11 +13,11 @@ The Voting contract is a simple Ethereum smart contract that allows for the mana
 
 ## Changes
 
-- chages candidate mapping to candidate id to candidate name
-    - no need for candidate id as candidate details are fetch from candidate id 
+- changes candidate mapping to candidate ID to candidate name
+    - no need for candidate ID as candidate details are fetched from candidate ID 
     - move voteCount to new mapping
-- create new mapping to store candidate vote count for particular session
-- create session, as reseting all candidate vote counts to zero, which is gas-intensive, introduce a session mechanism. Starting a new session will automatically initialize the vote count for all candidates to zero, optimizing gas usage.
+- create a new mapping to store candidate vote count for a particular session
+- Create a session, reset all candidate vote counts to zero, which is gas-intensive, and introduce a session mechanism. Starting a new session will automatically initialize the vote count for all candidates to zero, optimizing gas usage.
 
 ## Scripts
 
